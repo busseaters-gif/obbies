@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Obby</title>
+<style>
+  body { margin: 0; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
+<script>
+/* ---------- scene ---------- */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* ---------- light ---------- */
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+sun.position.set(5, 10, 5);
+scene.add(sun);
+
+/* ---------- player ---------- */
+const playerSize = 1.2;
+const player = new THREE.Mesh(
+  new THREE.SphereGeometry(playerSize / 2, 32, 32),
+  new THREE.MeshStandardMaterial({ color: 0x00ff23 })
+);
+
+/* ---------- start = 0, 14, 18 ---------- */
+player.position.set(0, 14, 18);
+scene.add(player);
+
+/* ---------- respawn machinee ---------- */
+let respawnPosition = new THREE.Vector3(0, 4, 18);
+
+/* ---------- raycaster ---------- */
+const raycaster = new THREE.Raycaster();
+
+/* ---------- platforms ---------- */
+const platforms = [];
+
+function makePlatform(x, y, z, w, h, d, c) {
+  const p = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color: c })
+  );
+  p.position.set(x, y, -z);
+  p.userData = { isKillBrick: false };
+  scene.add(p);
+  platforms.push(p);
+}
+
+function makeKillBrick(x, y, z, w, h, d) {
+  const p = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color: "red" })
+  );
+  p.position.set(x, y, -z);
+  p.userData = { isKillBrick: true };
+  scene.add(p);
+  platforms.push(p);
+}
+
+function makeCheckpoint(x, y, z, w, h, d) {
+  const p = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color: 0x00ffff })
+  );
+  p.position.set(x, y, -z);
+  p.userData = { isCheckpoint: true, activated: false };
+  scene.add(p);
+  platforms.push(p);
+}
+
+function makeSign(x, y, z, w, h, text, rotDeg = 0) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.font = "23px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, h),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(canvas),
+      side: THREE.DoubleSide
+    })
+  );
+
+  sign.position.set(x, y + h / 2, -z);
+  sign.rotation.y = THREE.MathUtils.degToRad(rotDeg);
+  scene.add(sign);
+}
+
+/* ---------- map objects ---------- */
+makePlatform(0, 0, -7.5, 25, 1, 25, 0xc60106);
+makeSign(-5, 6.5, 4, 4, 2, "kinda hard obby");
+makeSign(5, 6.5, 4, 4, 2, "left & right arrow to turn");
+makeSign(-5, 3, 4, 4, 2, "only 1 checkpoint");
+makeSign(5, 3, 4, 4, 2, "4 stages");
+
+/* ---------- stage 1 ---------- */
+makePlatform(0, 0, 15, 5, 1, 20, 0xc60106);
+makePlatform(0, 0, 35, 5, 1, 20, 0xc60106);
+makeKillBrick(0, 0.75, 10, 5, 0.5, 2);
+makeKillBrick(0, 0.75, 17, 5, 0.5, 2);
+makeKillBrick(0, 0.75, 24, 5, 0.5, 2);
+makeKillBrick(0, 0.75, 31, 5, 0.5, 2);
+makeKillBrick(0, 0.75, 38, 5, 0.5, 2);
+
+/* ---------- stage 2 ---------- */
+
+makePlatform(0, 0, 50, 10, 1, 10, 0xc60106);
+makePlatform(2, 1, 58, 2, 1, 2, 0xc60106);
+makePlatform(-2, 2, 63, 2, 1, 2, 0xc60106);
+makePlatform(2, 3, 68, 2, 1, 2, 0xc60106); 
+makePlatform(-2, 4, 73, 2, 1, 2, 0xc60106);
+makePlatform(2, 5, 78, 2, 1, 2, 0xc60106);
+makePlatform(-2, 6, 83, 2, 1, 2, 0xc60106);
+makePlatform(2, 7, 88, 2, 1, 2, 0xc60106); 
+makePlatform(-2, 8, 93, 2, 1, 2, 0xc60106);
+makePlatform(2, 9, 98, 2, 1, 2, 0xc60106); 
+makePlatform(-2, 10, 103, 2, 1, 2, 0xc60106);
+
+/* ---------- stage 3 ---------- */
+makePlatform(0, 11, 113, 10, 1, 10, 0xc60106);
+makeSign(0, 18, 118, 4, 2, "dang lil bros a pro");
+makePlatform(-2.5, 11, 125, 3, 1, 4, 0xc60106);
+makeKillBrick(-2.5, 11.5, 125, 3, 0.2, 1);
+makePlatform(2.5, 11, 131, 3, 1, 4, 0xc60106);
+makeKillBrick(2.5, 11.5, 131, 3, 0.2, 1);
+makePlatform(-2.5, 11, 137, 3, 1, 4, 0xc60106);
+makeKillBrick(-2.5, 11.5, 137, 3, 0.2, 1);
+makePlatform(2.5, 11, 143, 3, 1, 4, 0xc60106);
+makeKillBrick(2.5, 11.5, 143, 3, 0.2, 1);
+makePlatform(-1, 11, 155.5, 2, 1, 14, 0xc60106);
+makeKillBrick(-1, 15, 152, 1, 8, 0.2);
+makeKillBrick(-1, 15, 158, 1, 8, 0.2);
+makePlatform(-1, 11, 173, 10, 1, 10, 0xc60106);
+
+/* ---------- stage 4 ---------- */
+makeCheckpoint(-1, 11.6, 173, 3, 0.2, 3);
+makeSign(-1, 15, 178, 4, 2, "1 more stages lilbro"); 
+makeSign(-1, 12, 178, 4, 2, "<-----");
+makePlatform(-9, 11, 173, 2, 1, 2, 0xc60106);
+makeKillBrick(-9, 15, 173, 1, 8, 0.25);
+makePlatform(-20, 11, 173, 15, 1, 0.6, 0xc60106);
+makeKillBrick(-17, 11.6, 173, 1, 0.2, 0.6);
+makeKillBrick(-22, 11.6, 173, 1, 0.2, 0.6);
+makePlatform(-32, 14, 173, 1, 10, 2, 0xc60106);
+makePlatform(-38, 11, 173, 12, 1, 2, 0xc60106);
+makeKillBrick(-37.5, 16, 173, 1, 10, 0.6);
+makeKillBrick(-42, 11.75 + 0.125, 173, 0.5, 0.75, 2);
+makePlatform(-51, 11, 173, 2, 1, 2, 0xc60106);
+makePlatform(-58, 11, 173, 2, 1, 2, 0xc60106);
+makePlatform(-66, 11, 173, 2, 1, 2, 0xc60106);
+makePlatform(-73, 15, 173, 2, 8, 2, 0xc60106);
+
+/* ---------- end ---------- */
+makePlatform(-78, 11, 173, 10, 1, 10, 0x9D00FF);
+makeSign(-83, 19, 173, 4, 2, "You won!", 90);
+makeSign(-83, 17, 173, 4, 2, "good job", 90);
+makeCheckpoint(-78, 11.6, 173, 3, 0.2, 3);
+
+
+
+/* ---------- input ---------- */
+const keys = {};
+addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+/* ---------- physics ---------- */
+let velocityY = 0;
+const gravity = -0.03;
+const speed = 0.15;
+const jumpPower = 0.65;
+
+function updatePlayer() {
+  const moveStep = speed;
+
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  dir.y = 0;
+  dir.normalize();
+
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), dir);
+
+  function canMove(offset) {
+    const origin = player.position.clone();
+    origin.y += playerSize / 2;
+    raycaster.set(origin, offset.clone().normalize());
+    const hits = raycaster.intersectObjects(platforms, false);
+    return !(hits.length && hits[0].distance < moveStep + 0.05);
+  }
+
+  if (keys.w && canMove(dir)) player.position.add(dir.clone().multiplyScalar(moveStep));
+  if (keys.s && canMove(dir.clone().negate())) player.position.add(dir.clone().multiplyScalar(-moveStep));
+  if (keys.a && canMove(right)) player.position.add(right.clone().multiplyScalar(moveStep));
+  if (keys.d && canMove(right.clone().negate())) player.position.add(right.clone().multiplyScalar(-moveStep));
+
+  velocityY += gravity;
+  player.position.y += velocityY;
+
+  const offsets = [
+    new THREE.Vector3(0,0,0),
+    new THREE.Vector3(0.5,0,0),
+    new THREE.Vector3(-0.5,0,0),
+    new THREE.Vector3(0,0,0.5),
+    new THREE.Vector3(0,0,-0.5)
+  ];
+
+  let grounded = false;
+  for (const o of offsets) {
+    const origin = player.position.clone().add(o);
+    raycaster.set(origin, new THREE.Vector3(0,-1,0));
+    const hits = raycaster.intersectObjects(platforms, false);
+    if (hits.length && !hits[0].object.userData.isKillBrick &&
+        hits[0].distance <= playerSize/2 + 0.05 && velocityY <= 0) {
+      player.position.y = hits[0].point.y + playerSize/2;
+      velocityY = 0;
+      grounded = true;
+      break;
+    }
+  }
+
+  if (grounded && keys[" "]) velocityY = jumpPower;
+
+  const playerSphere = new THREE.Sphere(player.position, playerSize*0.7);
+
+  for (const p of platforms) {
+    const box = new THREE.Box3().setFromObject(p);
+
+    if (p.userData.isKillBrick && playerSphere.intersectsBox(box)) {
+      player.position.copy(respawnPosition);
+      velocityY = 0;
+      return;
+    }
+
+    if (p.userData.isCheckpoint && !p.userData.activated &&
+        playerSphere.intersectsBox(box)) {
+      respawnPosition.copy(player.position);
+      respawnPosition.y += 1;
+      p.userData.activated = true;
+      p.material.color.set(0x00ff00);
+      console.log("Checkpoint activated at", respawnPosition);
+    }
+  }
+
+  if (player.position.y < -40) {
+    player.position.copy(respawnPosition);
+    velocityY = 0;
+  }
+}
+
+/* ---------- camera ---------- */
+let angle = 0;
+function updateCamera() {
+  if (keys.arrowleft) angle += 0.03;
+  if (keys.arrowright) angle -= 0.03;
+
+  camera.position.lerp(
+    new THREE.Vector3(
+      player.position.x + Math.sin(angle) * 10,
+      player.position.y + 6,
+      player.position.z + Math.cos(angle) * 10
+    ), 0.1
+  );
+  camera.lookAt(player.position.x, player.position.y + 2, player.position.z);
+}
+
+/* ---------- loop ---------- */
+function animate() {
+  requestAnimationFrame(animate);
+  updatePlayer();
+  updateCamera();
+  renderer.render(scene, camera);
+}
+animate();
+
+/* ---------- resize ---------- */
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
